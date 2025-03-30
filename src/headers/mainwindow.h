@@ -6,7 +6,6 @@
 #include <QFileInfo>
 #include <QMainWindow>
 #include <QMessageBox>
-#include <QSystemTrayIcon>
 
 // Headers
 #include "utils.h"
@@ -20,16 +19,30 @@ QT_END_NAMESPACE
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
+private:
+    MainWindow(Utils& u, QWidget *parent = nullptr);
+
 public:
-  MainWindow(QWidget *parent = nullptr);
+
+    static void showMainMenu(Utils& u)
+    {
+        if (!mGlobalInstance)
+            mGlobalInstance = new MainWindow(u);
+        mGlobalInstance->show();
+    }
+
+    static void destroyMainMenu()
+    {
+        if (mGlobalInstance)
+            delete mGlobalInstance;
+    }
+
   ~MainWindow();
 
 public slots:
 
 private slots:
   void closeEvent(QCloseEvent *event);
-
-  void iconActivated(QSystemTrayIcon::ActivationReason);
 
   void refreshDirs();
   void loadPrefs();
@@ -88,9 +101,6 @@ private slots:
 
 private:
   Ui::MainWindow *ui;
-  QSystemTrayIcon *trayIcon;
-  QMenu *trayMenu;
-  QMenu *createMenu();
   QString scheduleType;
   QString lightStyle;
   QString darkStyle;
@@ -108,7 +118,9 @@ private:
   QString darkKvantumStyle;
   QString lightTime;
   QString darkTime;
-  Utils utils;
+  Utils& utils;
+
+  static MainWindow* mGlobalInstance;
 
 protected:
 };

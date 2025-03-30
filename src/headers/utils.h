@@ -42,14 +42,18 @@ public:
   QStringList getGtkThemes(void);
   QStringList getKvantumStyles(void);
 
-  void notify(QString notifySummary = "", QString notifyBody = "",
-              int timeoutms = 5000);
+
   void startupTimeCheck();
   void startupSunCheck();
 
+public slots:
   void toggle();
   void goLight();
   void goDark();
+
+  void notify(QString notifySummary = "", QString notifyBody = "",
+              int timeoutms = 5000);
+
   void goLightStyle();
   void goDarkStyle();
   void goLightColors();

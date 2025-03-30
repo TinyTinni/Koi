@@ -4,31 +4,32 @@
 #include "libraries/SunRise.h"
 #include "ui/ui_mainwindow.h"
 
+#include <iostream>
+
 Bosma::Scheduler s(2);
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow) {
-  trayIcon = new QSystemTrayIcon(this);
+MainWindow *MainWindow::mGlobalInstance = nullptr;
+
+MainWindow::MainWindow(Utils &u, QWidget *parent)
+    : QMainWindow(parent), ui(new Ui::MainWindow), utils(u)
+{
   QIcon icon =
       QIcon::fromTheme("koi_tray", QIcon(":/resources/icons/koi_tray.png"));
-  this->trayIcon->setIcon(icon);
-  this->trayIcon->setVisible(true);
-  trayMenu = this->createMenu();
-  this->trayIcon->setContextMenu(trayMenu); // Set tray context menu
-  connect(trayIcon, &QSystemTrayIcon::activated, this,
-          &MainWindow::iconActivated); // System tray interaction
-  utils.initialiseSettings();
   ui->setupUi(this);
   ui->mainStack->setCurrentIndex(0); // Always start window on main view
   refreshDirs();
   loadPrefs(); // Load prefs on startup
-  if (utils.settings->value("schedule").toBool()) {
+  if (utils.settings->value("schedule").toBool())
+  {
     if (utils.settings->value("schedule-type").toString() ==
-        "time") {               // Scheduled switch
+        "time")
+    {                           // Scheduled switch
       utils.startupTimeCheck(); // Switch themes on startup
       scheduleLight();
       scheduleDark();
-    } else {                   // Auto sun switch
+    }
+    else
+    {                          // Auto sun switch
       utils.startupSunCheck(); // Switch themes on startup
       scheduleSunEvent();
     }
@@ -40,88 +41,51 @@ MainWindow::MainWindow(QWidget *parent)
           &MainWindow::on_actionRestart_triggered);
   ui->resMsg->addAction(actionRes);
 }
-MainWindow::~MainWindow() { this->setVisible(0); }
+MainWindow::~MainWindow()
+{
+  delete ui;
+}
 
 // Override window managing events
-void MainWindow::closeEvent(QCloseEvent *event) { // Overide close event
-  event->ignore();
-  toggleVisibility();
+void MainWindow::closeEvent(QCloseEvent *event)
+{ // Overide close event
+  mGlobalInstance->deleteLater();
+  mGlobalInstance = nullptr;
+  QMainWindow::closeEvent(event);
 }
-
-// SysTray related functionality
-QMenu *MainWindow::createMenu() // Define context menu items for SysTray -
-                                // R-click to show context menu
-{
-  // Tray action menu
-  auto actionMenuQuit = new QAction("&Quit", this); // Quit app
-  connect(actionMenuQuit, &QAction::triggered, this, &QCoreApplication::quit);
-  auto actionMenuLight = new QAction("&Light", this); // Switch to light
-  connect(actionMenuLight, &QAction::triggered, this,
-          &MainWindow::on_lightBtn_clicked);        // Doesn't work.
-  auto actionMenuDark = new QAction("&Dark", this); // Switch to dark
-  connect(actionMenuDark, &QAction::triggered, this,
-          &MainWindow::on_darkBtn_clicked); // Doesn't work.
-  auto actionMenuToggle = new QAction("&Toggle Window", this);
-  connect(actionMenuToggle, &QAction::triggered, this,
-          &MainWindow::toggleVisibility);
-
-  // Build tray items
-  auto trayMenu = new QMenu(this);
-  trayMenu->addAction(actionMenuToggle);
-  trayMenu->addAction(actionMenuLight);
-  trayMenu->addAction(actionMenuDark);
-  trayMenu->addAction(actionMenuQuit);
-  return trayMenu;
-}
-void MainWindow::iconActivated(
-    QSystemTrayIcon::ActivationReason
-        reason) // Define actions for SysTray L&M-click
-{
-  switch (reason) {
-  case QSystemTrayIcon::Trigger: // Left-click to toggle window visibility
-    toggleVisibility();
-    break;
-
-    // case QSystemTrayIcon::MiddleClick: // Middle-click to toggle between
-    // light and dark
-    //     utils.notify("Hello!", "You middle-clicked me", 0); // Must implement
-    //     toggle break;
-  case QSystemTrayIcon::MiddleClick: // Middle-click to toggle between light and
-                                     // dark
-    utils.toggle();
-    break;
-
-    // Must understand tray better - Why can't right click be part of switch
-    // statement?
-
-  default: // Need to understand switch statements better - Why is this
-           // required?
-    break;
-  }
-}
-
 // Independent functions
-void MainWindow::loadPrefs() {
+void MainWindow::loadPrefs()
+{
   // Load notify prefs
-  if (utils.settings->value("notify", true).toBool()) {
+  if (utils.settings->value("notify", true).toBool())
+  {
     ui->notifyCheckBox->setChecked(true);
-  } else {
+  }
+  else
+  {
     ui->notifyCheckBox->setChecked(false);
   }
   // Load startup prefs
-  if (utils.settings->value("start-hidden").toBool()) {
+  if (utils.settings->value("start-hidden").toBool())
+  {
     ui->hiddenCheckBox->setChecked(true);
-  } else {
+  }
+  else
+  {
     ui->hiddenCheckBox->setChecked(false);
   }
 
   // Load scheduling prefs
-  if (utils.settings->value("schedule").toBool()) {
+  if (utils.settings->value("schedule").toBool())
+  {
     ui->autoCheckBox->setChecked(1);
-  } else {
+  }
+  else
+  {
     ui->autoCheckBox->setChecked(0);
   }
-  if (utils.settings->value("schedule-type") == "time") {
+  if (utils.settings->value("schedule-type") == "time")
+  {
     ui->scheduleRadioBtn->setChecked(1);
     ui->lightTimeLabel->setVisible(true);
     ui->darkTimeLabel->setVisible(true);
@@ -131,7 +95,9 @@ void MainWindow::loadPrefs() {
     ui->longitudeLabel->setVisible(false);
     ui->latitudeDSB->setVisible(false);
     ui->longitudeDSB->setVisible(false);
-  } else {
+  }
+  else
+  {
     ui->sunRadioBtn->setChecked(1);
     ui->lightTimeLabel->setVisible(false);
     ui->darkTimeLabel->setVisible(false);
@@ -150,9 +116,12 @@ void MainWindow::loadPrefs() {
   ui->longitudeDSB->setValue(utils.settings->value("longitude").toDouble());
 
   // Load Plasma style prefs
-  if (utils.settings->value("PlasmaStyle/enabled").toBool()) {
+  if (utils.settings->value("PlasmaStyle/enabled").toBool())
+  {
     ui->styleCheckBox->setChecked(true);
-  } else {
+  }
+  else
+  {
     ui->styleCheckBox->setChecked(false);
   }
   ui->lightDropStyle->setCurrentText(
@@ -161,9 +130,12 @@ void MainWindow::loadPrefs() {
       utils.settings->value("PlasmaStyle/dark").toString());
 
   // Load color scheme prefs
-  if (utils.settings->value("ColorScheme/enabled").toBool()) {
+  if (utils.settings->value("ColorScheme/enabled").toBool())
+  {
     ui->colorCheckBox->setChecked(true);
-  } else {
+  }
+  else
+  {
     ui->colorCheckBox->setChecked(false);
   }
   QFileInfo lightColorsPref(
@@ -176,9 +148,12 @@ void MainWindow::loadPrefs() {
   ui->darkDropColor->setCurrentText(darkColorsPrefString);
 
   // Load icon theme prefs
-  if (utils.settings->value("IconTheme/enabled").toBool()) {
+  if (utils.settings->value("IconTheme/enabled").toBool())
+  {
     ui->iconCheckBox->setChecked(true);
-  } else {
+  }
+  else
+  {
     ui->iconCheckBox->setChecked(false);
   }
   ui->lightDropIcon->setCurrentText(
@@ -187,9 +162,12 @@ void MainWindow::loadPrefs() {
       utils.settings->value("IconTheme/dark").toString());
 
   // Load GTK Theme prefs
-  if (utils.settings->value("GTKTheme/enabled").toBool()) {
+  if (utils.settings->value("GTKTheme/enabled").toBool())
+  {
     ui->gtkCheckBox->setChecked(true);
-  } else {
+  }
+  else
+  {
     ui->gtkCheckBox->setChecked(false);
   }
   ui->lightDropGtk->setCurrentText(
@@ -198,9 +176,12 @@ void MainWindow::loadPrefs() {
       utils.settings->value("GTKTheme/dark").toString());
 
   // Load Kvantum Style theme prefs
-  if (utils.settings->value("KvantumStyle/enabled").toBool()) {
+  if (utils.settings->value("KvantumStyle/enabled").toBool())
+  {
     ui->kvantumStyleCheckBox->setChecked(true);
-  } else {
+  }
+  else
+  {
     ui->kvantumStyleCheckBox->setChecked(false);
   }
   // sets the displayed text on the combo box of the kvantum style.
@@ -210,53 +191,75 @@ void MainWindow::loadPrefs() {
       utils.settings->value("KvantumStyle/dark").toString());
 
   // Load Wallpaper prefs
-  if (utils.settings->value("Wallpaper/enabled").toBool()) {
+  if (utils.settings->value("Wallpaper/enabled").toBool())
+  {
     ui->wallCheckBox->setChecked(true);
-  } else {
+  }
+  else
+  {
     ui->wallCheckBox->setChecked(false);
   }
   QFileInfo lw(utils.settings->value("Wallpaper/light").toString());
   QString lightWallBtnText = lw.fileName();
-  if (lightWall.isEmpty()) {
+  if (lightWall.isEmpty())
+  {
     ui->lightWallBtn->setText("Select...");
-  } else {
+  }
+  else
+  {
     ui->lightWallBtn->setText(lightWallBtnText);
   }
   QFileInfo dw(utils.settings->value("Wallpaper/dark").toString());
   QString darkWallBtnText = dw.fileName();
-  if (darkWall.isEmpty()) {
+  if (darkWall.isEmpty())
+  {
     ui->darkWallBtn->setText("Select...");
-  } else {
+  }
+  else
+  {
     ui->darkWallBtn->setText(darkWallBtnText);
   }
 
   // Load Script prefs
-  if (utils.settings->value("Script/enabled").toBool()) {
+  if (utils.settings->value("Script/enabled").toBool())
+  {
     ui->scriptCheckBox->setChecked(true);
-  } else {
+  }
+  else
+  {
     ui->scriptCheckBox->setChecked(false);
   }
   QFileInfo ls(utils.settings->value("Script/light").toString());
   QString lightScriptBtnText = ls.fileName();
-  if (lightScript.isEmpty()) {
+  if (lightScript.isEmpty())
+  {
     ui->lightScriptBtn->setText("Select...");
-  } else {
+  }
+  else
+  {
     ui->lightScriptBtn->setText(lightScriptBtnText);
   }
   QFileInfo ds(utils.settings->value("Script/dark").toString());
   QString darkScriptBtnText = ds.fileName();
-  if (darkScript.isEmpty()) {
+  if (darkScript.isEmpty())
+  {
     ui->darkScriptBtn->setText("Select...");
-  } else {
+  }
+  else
+  {
     ui->darkScriptBtn->setText(darkScriptBtnText);
   }
 }
 
-void MainWindow::savePrefs() {
+void MainWindow::savePrefs()
+{
   // Plasma Style enabling
-  if (ui->styleCheckBox->isChecked() == 0) {
+  if (ui->styleCheckBox->isChecked() == 0)
+  {
     utils.settings->setValue("PlasmaStyle/enabled", false);
-  } else {
+  }
+  else
+  {
     utils.settings->setValue("PlasmaStyle/enabled", true);
   }
   // Plasma Style saving prefs
@@ -264,9 +267,12 @@ void MainWindow::savePrefs() {
   utils.settings->setValue("PlasmaStyle/dark", darkStyle);
 
   // Color scheme enabling
-  if (ui->colorCheckBox->isChecked() == 0) {
+  if (ui->colorCheckBox->isChecked() == 0)
+  {
     utils.settings->setValue("ColorScheme/enabled", false);
-  } else {
+  }
+  else
+  {
     utils.settings->setValue("ColorScheme/enabled", true);
   }
   // Color scheme saving prefs
@@ -274,9 +280,12 @@ void MainWindow::savePrefs() {
   utils.settings->setValue("ColorScheme/dark", darkColor);
 
   // Icon theme enabling
-  if (ui->iconCheckBox->checkState() == 0) {
+  if (ui->iconCheckBox->checkState() == 0)
+  {
     utils.settings->setValue("IconTheme/enabled", false);
-  } else {
+  }
+  else
+  {
     utils.settings->setValue("IconTheme/enabled", true);
   }
   // Icon theme saving prefs
@@ -284,9 +293,12 @@ void MainWindow::savePrefs() {
   utils.settings->setValue("IconTheme/dark", darkIcon);
 
   // GTK theme enabling
-  if (ui->gtkCheckBox->isChecked() == 0) {
+  if (ui->gtkCheckBox->isChecked() == 0)
+  {
     utils.settings->setValue("GTKTheme/enabled", false);
-  } else {
+  }
+  else
+  {
     utils.settings->setValue("GTKTheme/enabled", true);
   }
   // GTK theme saving prefs
@@ -294,9 +306,12 @@ void MainWindow::savePrefs() {
   utils.settings->setValue("GTKTheme/dark", darkGtk);
 
   // Kvantum Style enabling
-  if (ui->kvantumStyleCheckBox->isChecked() == 0) {
+  if (ui->kvantumStyleCheckBox->isChecked() == 0)
+  {
     utils.settings->setValue("KvantumStyle/enabled", false);
-  } else {
+  }
+  else
+  {
     utils.settings->setValue("KvantumStyle/enabled", true);
   }
   // Kvantum Style Theme saving Prefs
@@ -304,9 +319,12 @@ void MainWindow::savePrefs() {
   utils.settings->setValue("KvantumStyle/dark", darkKvantumStyle);
 
   // Wallpaper enabling
-  if (ui->wallCheckBox->isChecked() == 0) {
+  if (ui->wallCheckBox->isChecked() == 0)
+  {
     utils.settings->setValue("Wallpaper/enabled", false);
-  } else {
+  }
+  else
+  {
     utils.settings->setValue("Wallpaper/enabled", true);
   }
   // Wallpaper saving prefs
@@ -315,9 +333,12 @@ void MainWindow::savePrefs() {
   utils.settings->sync();
 
   // Script enabling
-  if (ui->scriptCheckBox->isChecked() == 0) {
+  if (ui->scriptCheckBox->isChecked() == 0)
+  {
     utils.settings->setValue("Script/enabled", false);
-  } else {
+  }
+  else
+  {
     utils.settings->setValue("Script/enabled", true);
   }
   // Script saving prefs
@@ -361,11 +382,15 @@ void MainWindow::refreshDirs() // Refresh function to find new themes
   ui->darkDropKvantumStyle->addItems(kvantumStyle);
   loadPrefs();
 }
-void MainWindow::toggleVisibility() {
-  if (this->isVisible() == 0) {
+void MainWindow::toggleVisibility()
+{
+  if (this->isVisible() == 0)
+  {
     this->setVisible(1);
     this->activateWindow();
-  } else {
+  }
+  else
+  {
     this->setVisible(0);
   }
 }
@@ -373,43 +398,55 @@ int MainWindow::prefsSaved() // Lots of ifs, don't know how to do it any other
                              // way. Maybe an array?
 {
   if (ui->styleCheckBox->isChecked() !=
-      utils.settings->value("PlasmaStyle/enabled").toBool()) {
+      utils.settings->value("PlasmaStyle/enabled").toBool())
+  {
     return 0;
   }
-  if (lightStyle != utils.settings->value("PlasmaStyle/light").toString()) {
+  if (lightStyle != utils.settings->value("PlasmaStyle/light").toString())
+  {
     return 0;
   }
-  if (darkStyle != utils.settings->value("PlasmaStyle/dark").toString()) {
+  if (darkStyle != utils.settings->value("PlasmaStyle/dark").toString())
+  {
     return 0;
   }
   if (ui->colorCheckBox->isChecked() !=
-      utils.settings->value("ColorScheme/enabled").toBool()) {
+      utils.settings->value("ColorScheme/enabled").toBool())
+  {
     return 0;
   }
-  if (lightColor != utils.settings->value("ColorScheme/light").toString()) {
+  if (lightColor != utils.settings->value("ColorScheme/light").toString())
+  {
     return 0;
   }
-  if (darkColor != utils.settings->value("ColorScheme/dark").toString()) {
+  if (darkColor != utils.settings->value("ColorScheme/dark").toString())
+  {
     return 0;
   }
   if (ui->iconCheckBox->isChecked() !=
-      utils.settings->value("IconTheme/enabled").toBool()) {
+      utils.settings->value("IconTheme/enabled").toBool())
+  {
     return 0;
   }
-  if (lightIcon != utils.settings->value("IconTheme/light").toString()) {
+  if (lightIcon != utils.settings->value("IconTheme/light").toString())
+  {
     return 0;
   }
-  if (darkIcon != utils.settings->value("IconTheme/dark").toString()) {
+  if (darkIcon != utils.settings->value("IconTheme/dark").toString())
+  {
     return 0;
   }
   if (ui->gtkCheckBox->isChecked() !=
-      utils.settings->value("GTKTheme/enabled").toBool()) {
+      utils.settings->value("GTKTheme/enabled").toBool())
+  {
     return 0;
   }
-  if (lightGtk != utils.settings->value("GTKTheme/light").toString()) {
+  if (lightGtk != utils.settings->value("GTKTheme/light").toString())
+  {
     return 0;
   }
-  if (darkGtk != utils.settings->value("GTKTheme/dark").toString()) {
+  if (darkGtk != utils.settings->value("GTKTheme/dark").toString())
+  {
     return 0;
   }
   /*
@@ -418,72 +455,90 @@ int MainWindow::prefsSaved() // Lots of ifs, don't know how to do it any other
   dependent on whether the check box is clicked
   */
   if (ui->kvantumStyleCheckBox->isChecked() !=
-      utils.settings->value("KvantumStyle/enabled").toBool()) {
+      utils.settings->value("KvantumStyle/enabled").toBool())
+  {
     return 0;
   }
   if (lightKvantumStyle !=
-      utils.settings->value("KvantumStyle/light").toString()) {
+      utils.settings->value("KvantumStyle/light").toString())
+  {
     return 0;
   }
   if (darkKvantumStyle !=
-      utils.settings->value("KvantumStyle/dark").toString()) {
+      utils.settings->value("KvantumStyle/dark").toString())
+  {
     return 0;
   }
   if (ui->wallCheckBox->isChecked() !=
-      utils.settings->value("Wallpaper/enabled").toBool()) {
+      utils.settings->value("Wallpaper/enabled").toBool())
+  {
     return 0;
   }
-  if (lightWall != utils.settings->value("Wallpaper/light").toString()) {
+  if (lightWall != utils.settings->value("Wallpaper/light").toString())
+  {
     return 0;
   }
-  if (darkWall != utils.settings->value("Wallpaper/dark").toString()) {
+  if (darkWall != utils.settings->value("Wallpaper/dark").toString())
+  {
     return 0;
   }
   if (ui->scriptCheckBox->isChecked() !=
-      utils.settings->value("Script/enabled").toBool()) {
+      utils.settings->value("Script/enabled").toBool())
+  {
     return 0;
   }
-  if (lightScript != utils.settings->value("Script/light").toString()) {
+  if (lightScript != utils.settings->value("Script/light").toString())
+  {
     return 0;
   }
-  if (darkScript != utils.settings->value("Script/dark").toString()) {
+  if (darkScript != utils.settings->value("Script/dark").toString())
+  {
     return 0;
   }
   return 1;
 }
-void MainWindow::scheduleLight() {
+void MainWindow::scheduleLight()
+{
   int lightCronMin =
       QTime::fromString(utils.settings->value("time-light").toString())
           .minute();
   int lightCronHr =
       QTime::fromString(utils.settings->value("time-light").toString()).hour();
-  if (lightCronMin <= 0) {
+  if (lightCronMin <= 0)
+  {
     lightCronMin = 0;
   }
-  if (lightCronHr <= 0) {
+  if (lightCronHr <= 0)
+  {
     lightCronHr = 0;
   }
   std::string lightCron = std::to_string(lightCronMin) + " " +
                           std::to_string(lightCronHr) + " * * *";
-  s.cron(lightCron, [this]() { utils.goLight(); });
+  s.cron(lightCron, [this]()
+         { utils.goLight(); });
 }
-void MainWindow::scheduleDark() {
+void MainWindow::scheduleDark()
+{
   int darkCronMin =
       QTime::fromString(utils.settings->value("time-dark").toString()).minute();
   int darkCronHr =
       QTime::fromString(utils.settings->value("time-dark").toString()).hour();
-  if (darkCronMin <= 0) {
+  if (darkCronMin <= 0)
+  {
     darkCronMin = 0;
   }
-  if (darkCronHr <= 0) {
+  if (darkCronHr <= 0)
+  {
     darkCronHr = 0;
   }
   std::string darkCron =
       std::to_string(darkCronMin) + " " + std::to_string(darkCronHr) + " * * *";
-  s.cron(darkCron, [this]() { utils.goDark(); });
+  s.cron(darkCron, [this]()
+         { utils.goDark(); });
 }
 
-void MainWindow::scheduleSunEvent() {
+void MainWindow::scheduleSunEvent()
+{
   // Schedules a theme change for the next sunrise or sunfall
   double latitude = utils.settings->value("latitude").toDouble();
   double longitude = utils.settings->value("longitude").toDouble();
@@ -497,30 +552,36 @@ void MainWindow::scheduleSunEvent() {
   struct tm *timeinfo;
 
   if ((!sr.hasRise || (sr.hasRise && sr.riseTime < sr.queryTime)) &&
-      (!sr.hasSet || (sr.hasSet && sr.setTime < sr.queryTime))) {
+      (!sr.hasSet || (sr.hasSet && sr.setTime < sr.queryTime)))
+  {
     // No events found in the next SR_WINDOW/2 hours, check again later - may
     // happen in polar regions
-    s.in(std::chrono::hours(SR_WINDOW / 2), [this]() { scheduleSunEvent(); });
-  } else if (sr.hasRise && sr.riseTime > sr.queryTime) {
+    s.in(std::chrono::hours(SR_WINDOW / 2), [this]()
+         { scheduleSunEvent(); });
+  }
+  else if (sr.hasRise && sr.riseTime > sr.queryTime)
+  {
     timeinfo = localtime(&sr.riseTime);
     strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", timeinfo);
     // puts("Scheduling Light Theme for:");
     // puts(buffer);
     std::string sunEventCron = buffer;
-    s.at(sunEventCron, [this]() {
+    s.at(sunEventCron, [this]()
+         {
       utils.goLight();
-      scheduleSunEvent();
-    });
-  } else if (sr.hasSet && sr.setTime > sr.queryTime) {
+      scheduleSunEvent(); });
+  }
+  else if (sr.hasSet && sr.setTime > sr.queryTime)
+  {
     timeinfo = localtime(&sr.setTime);
     strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", timeinfo);
     // puts("Scheduling Dark Theme for:");
     // puts(buffer);
     std::string sunEventCron = buffer;
-    s.at(sunEventCron, [this]() {
+    s.at(sunEventCron, [this]()
+         {
       utils.goDark();
-      scheduleSunEvent();
-    });
+      scheduleSunEvent(); });
   }
 }
 
@@ -547,9 +608,12 @@ void MainWindow::on_prefsBtn_clicked() // Preferences button - Sets all
 void MainWindow::on_backBtn_clicked() // Back button in preferences view - Must
                                       // setup cheking if prefs saved
 {
-  if (prefsSaved()) {
+  if (prefsSaved())
+  {
     ui->mainStack->setCurrentIndex(0);
-  } else {
+  }
+  else
+  {
     QMessageBox applyConfs; // Verify if user wants to save settings
     applyConfs.setWindowTitle("Save Settings — Koi");
     applyConfs.setText(
@@ -559,7 +623,8 @@ void MainWindow::on_backBtn_clicked() // Back button in preferences view - Must
                                   QMessageBox::Cancel);
     applyConfs.setDefaultButton(QMessageBox::Save);
     int ret = applyConfs.exec();
-    switch (ret) {
+    switch (ret)
+    {
     case QMessageBox::Save: // Save and change stack
       savePrefs();
       ui->mainStack->setCurrentIndex(0);
@@ -677,7 +742,8 @@ void MainWindow::on_lightDropKvantumStyle_currentTextChanged(
   lightKvantumStyle = lightKvantumStyleUN;
 }
 void MainWindow::on_darkDropKvantumStyle_currentTextChanged(
-    const QString &darkKvantumStyleUN) {
+    const QString &darkKvantumStyleUN)
+{
   darkKvantumStyle = darkKvantumStyleUN;
 }
 void MainWindow::on_wallCheckBox_stateChanged(
@@ -753,9 +819,12 @@ void MainWindow::on_autoCheckBox_stateChanged(
 
   utils.settings->setValue("schedule", automaticEnabled);
   utils.settings->sync();
-  if (automaticEnabled) {
+  if (automaticEnabled)
+  {
     ui->resMsg->setText(tr("To enable automatic mode, Koi must be restarted."));
-  } else {
+  }
+  else
+  {
     ui->resMsg->setText(
         tr("To disable automatic mode, Koi must be restarted."));
   }
@@ -765,7 +834,8 @@ void MainWindow::on_autoCheckBox_stateChanged(
 void MainWindow::on_scheduleRadioBtn_toggled(
     bool scheduleSun) // Toggle between manual schedule, and sun schedule
 {
-  if (scheduleSun) {
+  if (scheduleSun)
+  {
     scheduleType = "time";
 
     ui->lightTimeLabel->setVisible(true);
@@ -776,8 +846,9 @@ void MainWindow::on_scheduleRadioBtn_toggled(
     ui->longitudeLabel->setVisible(false);
     ui->latitudeDSB->setVisible(false);
     ui->longitudeDSB->setVisible(false);
-
-  } else {
+  }
+  else
+  {
     scheduleType = "sun";
 
     ui->lightTimeLabel->setVisible(false);
@@ -816,7 +887,8 @@ void MainWindow::on_darkTimeEdit_userTimeChanged(
   ui->resMsg->setMessageType(KMessageWidget::Warning);
   ui->resMsg->animatedShow();
 }
-void MainWindow::on_latitudeDSB_valueChanged(double lat) {
+void MainWindow::on_latitudeDSB_valueChanged(double lat)
+{
   utils.settings->setValue("latitude", lat);
   utils.settings->sync();
   ui->resMsg->setText(
@@ -824,7 +896,8 @@ void MainWindow::on_latitudeDSB_valueChanged(double lat) {
   ui->resMsg->setMessageType(KMessageWidget::Warning);
   ui->resMsg->animatedShow();
 }
-void MainWindow::on_longitudeDSB_valueChanged(double lon) {
+void MainWindow::on_longitudeDSB_valueChanged(double lon)
+{
   utils.settings->setValue("longitude", lon);
   utils.settings->sync();
   ui->resMsg->setText(
@@ -832,10 +905,12 @@ void MainWindow::on_longitudeDSB_valueChanged(double lon) {
   ui->resMsg->setMessageType(KMessageWidget::Warning);
   ui->resMsg->animatedShow();
 }
-void MainWindow::on_hiddenCheckBox_stateChanged(int hiddenEnabled) {
+void MainWindow::on_hiddenCheckBox_stateChanged(int hiddenEnabled)
+{
   utils.settings->setValue("start-hidden", hiddenEnabled);
 }
-void MainWindow::on_notifyCheckBox_stateChanged(int notifyEnabled) {
+void MainWindow::on_notifyCheckBox_stateChanged(int notifyEnabled)
+{
   utils.settings->setValue("notify", notifyEnabled);
 }
 
@@ -861,7 +936,8 @@ void MainWindow::on_actionHide_triggered() // Hide to tray
 {
     on_refreshBtn_clicked();
 }*/
-void MainWindow::on_actionRestart_triggered() {
+void MainWindow::on_actionRestart_triggered()
+{
   QProcess::startDetached(QApplication::applicationFilePath(), QStringList());
   exit(12);
 }

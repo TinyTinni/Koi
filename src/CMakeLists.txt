@@ -34,12 +34,14 @@ add_executable(koi
     about.cpp
     license.cpp
     mainwindow.cpp
+    trayicon.cpp
     utils.cpp
     # QObject headers needs to be added as sources to properly run MOC and UIC.
     headers/about.h
     headers/license.h
     headers/mainwindow.h
     headers/utils.h
+    headers/trayicon.h
     # UI items
     resources/resources.qrc
     ui/about.ui
@@ -57,6 +59,8 @@ add_executable(koi
     plugins/script.cpp
     # Main entrypoint
     main.cpp
+    headers/trayicon.h
+    trayicon.cpp
 )
 
 target_compile_definitions(koi PUBLIC
